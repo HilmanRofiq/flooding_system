@@ -4,7 +4,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // CONNECT DB
 connectDB();
@@ -20,7 +20,7 @@ const sensorRoutes = require("./routes/sensorRoutes");
 app.use("/api", sensorRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server jalan di http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 const floodRoutes = require("./routes/floodRoutes");
