@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Server monitoring banjir aktif 🚀");
+  res.send("Server monitoring banjir aktif ");
 });
 
 const sensorRoutes = require("./routes/sensorRoutes");
