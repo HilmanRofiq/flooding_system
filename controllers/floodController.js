@@ -9,6 +9,7 @@ const AMAN_MAX = 100;
 const WASPADA_MAX = 150;
 const SIAGA_MAX = 200;
 
+
 function getStatus(level) {
   if (level <= AMAN_MAX) return "AMAN";
   if (level <= WASPADA_MAX) return "WASPADA";
@@ -17,6 +18,10 @@ function getStatus(level) {
 }
 
 const receiveFloodData = async (req, res) => {
+  console.log("=== DATA MASUK DARI ESP ===");
+  console.log("Time:", new Date().toISOString());
+  console.log("Payload:", req.body);
+
   try {
     const { device_id, water_level, soil_raw } = req.body;
 
@@ -26,6 +31,8 @@ const receiveFloodData = async (req, res) => {
 
     const calibratedLevel = water_level + OFFSET_CM;
     const status = getStatus(calibratedLevel);
+
+    console.log(`Device ${device_id} | Level: ${calibratedLevel} | Status: ${status}`);
 
     await SensorData.create({
       device_id,
