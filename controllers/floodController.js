@@ -2,14 +2,15 @@ const SensorData = require("../models/SensorData");
 const { sendWhatsApp } = require("../services/whatsappService");
 const { shouldSendAlert } = require("../utils/alertGuard");
 
+// ===== PARAMETER KALIBRASI (BISA DIUBAH TANPA SENTUH ESP) =====
+const SENSOR_HEIGHT = 200;   // tinggi sensor dari dasar sungai (cm)
+const OFFSET_CM = 0;         // koreksi pemasangan fisik
 
-// ====== PARAMETER KALIBRASI ======
-const OFFSET_CM = 0;
 const AMAN_MAX = 100;
 const WASPADA_MAX = 150;
 const SIAGA_MAX = 200;
 
-
+// ================= STATUS =================
 function getStatus(level) {
   if (level <= AMAN_MAX) return "AMAN";
   if (level <= WASPADA_MAX) return "WASPADA";
@@ -17,54 +18,52 @@ function getStatus(level) {
   return "BAHAYA";
 }
 
+// ================= CONTROLLER =================
 const receiveFloodData = async (req, res) => {
   console.log("=== DATA MASUK DARI ESP ===");
-  console.log("Time:", new Date().toISOString());
   console.log("Payload:", req.body);
 
   try {
-    const { device_id, water_level, soil_raw } = req.body;
+    const { device_id, distance_cm, soil_raw } = req.body;
 
-    if (!device_id || water_level == null) {
+    if (!device_id || distance_cm == null) {
       return res.status(400).json({ error: "Invalid payload" });
     }
 
-    const calibratedLevel = water_level + OFFSET_CM;
-    const status = getStatus(calibratedLevel);
+    // ===== KONVERSI JARAK → TINGGI AIR =====
+    const water_level = SENSOR_HEIGHT - distance_cm + OFFSET_CM;
 
-    console.log(`Device ${device_id} | Level: ${calibratedLevel} | Status: ${status}`);
+    const status = getStatus(water_level);
 
+    console.log(`Device ${device_id}`);
+    console.log(`Distance : ${distance_cm} cm`);
+    console.log(`Level    : ${water_level} cm`);
+    console.log(`Status   : ${status}`);
+
+    // ===== SIMPAN RAW + HASIL =====
     await SensorData.create({
       device_id,
-      water_level: calibratedLevel,
+      distance_cm,
+      water_level,
       soil_raw,
       status
     });
 
-        // ===== WHATSAPP ALERT (AMAN) =====
+    // ===== WHATSAPP ALERT =====
     if (shouldSendAlert(status)) {
-    const message = `
-    ⚠️ PERINGATAN BANJIR ⚠️
-    Device : ${device_id}
-    Tinggi : ${calibratedLevel.toFixed(1)} cm
-    Status : ${status}
-
-    Mohon waspada.
-    `;
-    await sendWhatsApp(message);
+      const message = `
+⚠️ PERINGATAN BANJIR ⚠️
+Device : ${device_id}
+Tinggi Air : ${water_level.toFixed(1)} cm
+Status : ${status}
+`;
+      await sendWhatsApp(message);
     }
-
-
-    console.log(
-      `[${device_id}] Water: ${calibratedLevel} cm | Status: ${status}`
-    );
-
-    const sirine = status === "SIAGA" || status === "BAHAYA";
 
     res.json({
       ok: true,
-      status,
-      sirine
+      water_level,
+      status
     });
 
   } catch (err) {
@@ -74,4 +73,3 @@ const receiveFloodData = async (req, res) => {
 };
 
 module.exports = { receiveFloodData };
-
