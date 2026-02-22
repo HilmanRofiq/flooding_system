@@ -56,6 +56,9 @@ const receiveFloodData = async (req, res) => {
 Device : ${device_id}
 Tinggi Air : ${water_level.toFixed(1)} cm
 Status : ${status}
+
+Anda bisa melihat ketinggian air dari cctv menggunakan link BPBD di bawah ini:
+https://bpbdkabbandung.higertech.com/
 `;
       await sendWhatsApp(message);
     }
