@@ -3,12 +3,12 @@ const { sendWhatsApp } = require("../services/whatsappService");
 const { shouldSendAlert } = require("../utils/alertGuard");
 
 // ===== PARAMETER KALIBRASI (BISA DIUBAH TANPA SENTUH ESP) =====
-const SENSOR_HEIGHT = 200;   // tinggi sensor dari dasar sungai (cm)
+const SENSOR_HEIGHT = 300;   // tinggi sensor dari dasar sungai (cm)
 const OFFSET_CM = 0;         // koreksi pemasangan fisik
 
-const AMAN_MAX = 100;
-const WASPADA_MAX = 150;
-const SIAGA_MAX = 200;
+const AMAN_MAX = 30;
+const WASPADA_MAX = 50;
+const SIAGA_MAX = 70;
 
 // ================= STATUS =================
 function getStatus(level) {
