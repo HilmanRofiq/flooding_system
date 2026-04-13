@@ -1,7 +1,7 @@
 function getFloodStatus(tinggi_air) {
-  if (tinggi_air < 30) return "AMAN";
-  if (tinggi_air < 50) return "WASPADA";
-  if (tinggi_air < 70) return "SIAGA";
+  if (tinggi_air < 80) return "AMAN";
+  if (tinggi_air < 120) return "WASPADA";
+  if (tinggi_air < 140) return "SIAGA";
   return "BAHAYA";
 }
 
