@@ -16,8 +16,8 @@ app.get("/", (req, res) => {
   res.send("Server monitoring banjir aktif ");
 });
 
-const sensorRoutes = require("./routes/sensorRoutes");
-app.use("/api", sensorRoutes);
+// const sensorRoutes = require("./routes/sensorRoutes");
+// app.use("/api", sensorRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
