@@ -28,6 +28,15 @@ const STATUS_CONFIG = {
   BAHAYA:  { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', icon: '🔴', label: 'BAHAYA' },
 };
 
+const INTERVAL_OPTIONS = [
+  { value: '', label: 'Semua Data (Raw)', unit: 'data' },
+  { value: '5min', label: 'Setiap 5 Menit', unit: 'x 5 menit' },
+  { value: '15min', label: 'Setiap 15 Menit', unit: 'x 15 menit' },
+  { value: '30min', label: 'Setiap 30 Menit', unit: 'x 30 menit' },
+  { value: '1hour', label: 'Setiap 1 Jam', unit: 'jam terakhir' },
+  { value: '1day', label: 'Setiap Hari', unit: 'hari terakhir' },
+];
+
 function getStatusFromLevel(level) {
   if (level == null) return 'AMAN';
   if (level <= AMAN_MAX) return 'AMAN';
@@ -43,19 +52,24 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [limit, setLimit] = useState(50);
+  const [interval, setInterval_] = useState('');
   const [meta, setMeta] = useState({ total: 0, showing: 0 });
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [activeTab, setActiveTab] = useState('grafik');
+  const [dataView, setDataView] = useState('water'); // 'water' | 'soil'
 
   // Fetch latest + historical data
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
+      const params = { limit };
+      if (interval) params.interval = interval;
+
       const [latestRes, historyRes] = await Promise.all([
         sensorDataApi.getLatest(),
-        sensorDataApi.getAll({ limit }),
+        sensorDataApi.getAll(params),
       ]);
       setLatest(latestRes.data || null);
       setSensorData(historyRes.data || []);
@@ -66,15 +80,15 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, interval]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
+    const timer = window.setInterval(fetchData, 10000);
+    return () => window.clearInterval(timer);
   }, [autoRefresh, fetchData]);
 
   const currentStatus = latest?.status || getStatusFromLevel(latest?.water_level);
@@ -100,12 +114,52 @@ export default function HomePage() {
     });
   };
 
+  const formatDateShort = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  // Format label based on interval
+  const formatLabel = (dateStr) => {
+    if (interval === '1day') {
+      return new Date(dateStr).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    if (interval === '1hour' || interval === '30min') {
+      return formatDateShort(dateStr);
+    }
+    return formatTime(dateStr);
+  };
+
   // ====== CHART DATA ======
   const chartData = useMemo(() => {
     const reversed = [...sensorData].reverse();
-    const labels = reversed.map(d => formatTime(d.waktu));
-    const waterLevels = reversed.map(d => d.water_level ?? 0);
+    const labels = reversed.map(d => formatLabel(d.waktu));
 
+    if (dataView === 'soil') {
+      const soilValues = reversed.map(d => d.soil_raw ?? 0);
+      return {
+        labels,
+        datasets: [
+          {
+            label: 'Kelembapan Tanah (raw)',
+            data: soilValues,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.1)',
+            borderWidth: 2.5,
+            pointRadius: soilValues.length > 30 ? 0 : 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#10b981',
+            fill: true,
+            tension: 0.3,
+          },
+        ],
+      };
+    }
+
+    const waterLevels = reversed.map(d => d.water_level ?? 0);
     return {
       labels,
       datasets: [
@@ -123,7 +177,7 @@ export default function HomePage() {
         },
       ],
     };
-  }, [sensorData]);
+  }, [sensorData, dataView, interval]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -141,7 +195,9 @@ export default function HomePage() {
         cornerRadius: 8,
         displayColors: false,
         callbacks: {
-          label: (ctx) => `Tinggi Air: ${ctx.parsed.y.toFixed(1)} cm`,
+          label: (ctx) => dataView === 'soil'
+            ? `Kelembapan Tanah: ${ctx.parsed.y.toFixed(0)} raw`
+            : `Tinggi Air: ${ctx.parsed.y.toFixed(1)} cm`,
         },
       },
     },
@@ -156,12 +212,13 @@ export default function HomePage() {
         ticks: { color: isDark ? '#64748b' : '#94a3b8', font: { size: 11 } },
       },
     },
-  }), [isDark]);
+  }), [isDark, dataView]);
 
   // Annotation plugin alternative: draw threshold lines via a custom plugin
   const thresholdPlugin = useMemo(() => ({
     id: 'thresholdLines',
     afterDraw: (chart) => {
+      if (dataView === 'soil') return; // No threshold lines for soil data
       const { ctx, chartArea: { left, right }, scales: { y } } = chart;
       const lines = [
         { value: AMAN_MAX, color: '#22c55e', label: 'AMAN' },
@@ -185,7 +242,7 @@ export default function HomePage() {
         ctx.restore();
       });
     },
-  }), []);
+  }), [dataView]);
 
   // ====== STATUS BADGE ======
   const StatusBadge = ({ status, size = 'sm' }) => {
@@ -201,6 +258,10 @@ export default function HomePage() {
       </span>
     );
   };
+
+  // Current interval label for display
+  const currentIntervalLabel = INTERVAL_OPTIONS.find(o => o.value === interval)?.label || 'Semua Data';
+  const currentIntervalUnit = INTERVAL_OPTIONS.find(o => o.value === interval)?.unit || 'data';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -219,7 +280,7 @@ export default function HomePage() {
             </div>
             <div>
               <span className="text-lg font-extrabold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent block leading-tight">
-                Monitoring Banjir
+                Flooding System
               </span>
               <span className="text-[0.65rem] text-text-muted leading-none">Sistem Peringatan Dini</span>
             </div>
@@ -308,7 +369,15 @@ export default function HomePage() {
         {/* METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {/* Water Level Card */}
-          <div className="relative overflow-hidden bg-surface-card border border-border-default rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:border-border-hover hover:shadow-[0_0_20px_var(--color-card-glow)] group">
+          <button
+            onClick={() => setDataView('water')}
+            className={`relative overflow-hidden bg-surface-card border rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:shadow-[0_0_20px_var(--color-card-glow)] group text-left cursor-pointer ${
+              dataView === 'water'
+                ? 'border-blue-500/50 ring-2 ring-blue-500/20'
+                : 'border-border-default hover:border-border-hover'
+            }`}
+            id="card-water-level"
+          >
             <div className="absolute inset-x-0 top-0 h-1 transition-opacity duration-200" style={{ backgroundColor: statusCfg.color }} />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Tinggi Muka Air</span>
@@ -319,10 +388,21 @@ export default function HomePage() {
               <span className="text-lg font-semibold text-text-muted ml-1">cm</span>
             </div>
             <StatusBadge status={currentStatus} />
-          </div>
+            {dataView === 'water' && (
+              <div className="absolute bottom-2 right-3 text-[0.6rem] font-semibold text-blue-400 uppercase tracking-wider">● Aktif</div>
+            )}
+          </button>
 
           {/* Distance Card */}
-          <div className="relative overflow-hidden bg-surface-card border border-border-default rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:border-border-hover hover:shadow-[0_0_20px_var(--color-card-glow)] group">
+          <button
+            onClick={() => setDataView('water')}
+            className={`relative overflow-hidden bg-surface-card border rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:shadow-[0_0_20px_var(--color-card-glow)] group text-left cursor-pointer ${
+              dataView === 'water'
+                ? 'border-blue-500/50 ring-2 ring-blue-500/20'
+                : 'border-border-default hover:border-border-hover'
+            }`}
+            id="card-distance"
+          >
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Jarak Sensor</span>
@@ -333,11 +413,21 @@ export default function HomePage() {
               <span className="text-lg font-semibold text-text-muted ml-1">cm</span>
             </div>
             <span className="text-xs text-text-muted">Jarak sensor ke permukaan air</span>
-          </div>
+          </button>
 
           {/* Soil Moisture Card */}
-          <div className="relative overflow-hidden bg-surface-card border border-border-default rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:border-border-hover hover:shadow-[0_0_20px_var(--color-card-glow)] group">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+          <button
+            onClick={() => setDataView('soil')}
+            className={`relative overflow-hidden bg-surface-card border rounded-2xl p-5 sm:p-6 transition-all duration-200 hover:shadow-[0_0_20px_var(--color-card-glow)] group text-left cursor-pointer ${
+              dataView === 'soil'
+                ? 'border-emerald-500/50 ring-2 ring-emerald-500/20'
+                : 'border-border-default hover:border-border-hover'
+            }`}
+            id="card-soil-moisture"
+          >
+            <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400 transition-opacity duration-200 ${
+              dataView === 'soil' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`} />
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Kelembapan Tanah</span>
               <span className="text-2xl opacity-30">🌱</span>
@@ -346,25 +436,59 @@ export default function HomePage() {
               {latest?.soil_raw != null ? latest.soil_raw : '—'}
               <span className="text-lg font-semibold text-text-muted ml-1">raw</span>
             </div>
-            <span className="text-xs text-text-muted">Nilai analog sensor tanah</span>
-          </div>
+            <span className="text-xs text-text-muted">Klik untuk lihat data kelembapan tanah</span>
+            {dataView === 'soil' && (
+              <div className="absolute bottom-2 right-3 text-[0.6rem] font-semibold text-emerald-400 uppercase tracking-wider">● Aktif</div>
+            )}
+          </button>
         </div>
+
+        {/* Data View Indicator */}
+        {dataView === 'soil' && (
+          <div className="flex items-center gap-2 mb-4 animate-slide-down">
+            <div className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2.5 bg-badge-green-bg text-badge-green-text border border-badge-green-border">
+              🌱 Menampilkan data <strong>Kelembapan Tanah</strong>
+              <button
+                onClick={() => setDataView('water')}
+                className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-badge-green-text/20 hover:bg-badge-green-text/30 transition-colors cursor-pointer"
+              >
+                ✕ Kembali ke Air
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Last updated + Controls */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div>
-            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Data Limit</label>
+            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Rentang Waktu</label>
+            <select
+              className="px-3 py-2 bg-surface-input border border-border-default rounded-lg text-text-primary text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15 appearance-none cursor-pointer pr-8"
+              value={interval}
+              onChange={(e) => setInterval_(e.target.value)}
+              id="interval-select"
+            >
+              {INTERVAL_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">
+              {interval ? 'Jumlah Waktu' : 'Data Limit'}
+            </label>
             <select
               className="px-3 py-2 bg-surface-input border border-border-default rounded-lg text-text-primary text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15 appearance-none cursor-pointer pr-8"
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
               id="limit-select"
             >
-              <option value={25}>25 data</option>
-              <option value={50}>50 data</option>
-              <option value={100}>100 data</option>
-              <option value={200}>200 data</option>
-              <option value={500}>500 data</option>
+              <option value={25}>25 {currentIntervalUnit}</option>
+              <option value={50}>50 {currentIntervalUnit}</option>
+              <option value={100}>100 {currentIntervalUnit}</option>
+              <option value={200}>200 {currentIntervalUnit}</option>
+              <option value={500}>500 {currentIntervalUnit}</option>
             </select>
           </div>
 
@@ -391,6 +515,7 @@ export default function HomePage() {
           {lastUpdated && (
             <span className="text-xs text-text-dim ml-auto hidden sm:block">
               Update terakhir: {lastUpdated.toLocaleTimeString('id-ID')}
+              {interval && <span className="ml-2 px-1.5 py-0.5 rounded bg-badge-blue-bg text-badge-blue-text border border-badge-blue-border text-[0.6rem]">{currentIntervalLabel}</span>}
             </span>
           )}
         </div>
@@ -437,15 +562,15 @@ export default function HomePage() {
             {/* ====== GRAFIK TAB ====== */}
             {activeTab === 'grafik' && (
               <div className="animate-slide-down">
-                {/* TMA Chart */}
+                {/* Main Chart (Water Level or Soil) */}
                 <div className="bg-surface-card border border-border-default rounded-2xl p-4 sm:p-6 mb-6">
                   <h3 className="text-sm font-bold text-text-primary mb-4 flex items-center gap-2">
-                    📈 Grafik Tinggi Muka Air
-                    <span className="text-xs font-normal text-text-muted">({meta.showing} data terakhir)</span>
+                    {dataView === 'soil' ? '🌱 Grafik Kelembapan Tanah' : '📈 Grafik Tinggi Muka Air'}
+                    <span className="text-xs font-normal text-text-muted">({meta.showing} data{interval ? `, ${currentIntervalLabel}` : ''})</span>
                   </h3>
                   <div className="h-[300px] sm:h-[400px]">
                     {sensorData.length > 0 ? (
-                      <Line data={chartData} options={chartOptions} plugins={[thresholdPlugin]} />
+                      <Line key={`chart-main-${dataView}`} data={chartData} options={chartOptions} plugins={dataView === 'water' ? [thresholdPlugin] : []} />
                     ) : (
                       <div className="flex items-center justify-center h-full text-text-muted text-sm">
                         Belum ada data untuk ditampilkan
@@ -454,42 +579,72 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Distance Chart */}
-                <div className="bg-surface-card border border-border-default rounded-2xl p-4 sm:p-6">
-                  <h3 className="text-sm font-bold text-text-primary mb-4 flex items-center gap-2">
-                    📏 Grafik Jarak Sensor
-                  </h3>
-                  <div className="h-[250px] sm:h-[300px]">
-                    {sensorData.length > 0 ? (
-                      <Line
-                        data={{
-                          labels: [...sensorData].reverse().map(d => formatTime(d.waktu)),
-                          datasets: [{
-                            label: 'Jarak Sensor (cm)',
-                            data: [...sensorData].reverse().map(d => d.distance_cm ?? 0),
-                            borderColor: '#8b5cf6',
-                            backgroundColor: 'rgba(139,92,246,0.1)',
-                            borderWidth: 2,
-                            pointRadius: sensorData.length > 30 ? 0 : 3,
-                            fill: true,
-                            tension: 0.3,
-                          }],
-                        }}
-                        options={{
-                          ...chartOptions,
-                          scales: {
-                            ...chartOptions.scales,
-                            y: { ...chartOptions.scales.y, min: undefined },
-                          },
-                        }}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-text-muted text-sm">
-                        Belum ada data untuk ditampilkan
-                      </div>
-                    )}
+                {/* Secondary Chart */}
+                {dataView === 'water' && (
+                  <div className="bg-surface-card border border-border-default rounded-2xl p-4 sm:p-6">
+                    <h3 className="text-sm font-bold text-text-primary mb-4 flex items-center gap-2">
+                      📏 Grafik Jarak Sensor
+                    </h3>
+                    <div className="h-[250px] sm:h-[300px]">
+                      {sensorData.length > 0 ? (
+                        <Line
+                          data={{
+                            labels: [...sensorData].reverse().map(d => formatLabel(d.waktu)),
+                            datasets: [{
+                              label: 'Jarak Sensor (cm)',
+                              data: [...sensorData].reverse().map(d => d.distance_cm ?? 0),
+                              borderColor: '#8b5cf6',
+                              backgroundColor: 'rgba(139,92,246,0.1)',
+                              borderWidth: 2,
+                              pointRadius: sensorData.length > 30 ? 0 : 3,
+                              fill: true,
+                              tension: 0.3,
+                            }],
+                          }}
+                          options={{
+                            ...chartOptions,
+                            scales: {
+                              ...chartOptions.scales,
+                              y: { ...chartOptions.scales.y, min: undefined },
+                            },
+                          }}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-text-muted text-sm">
+                          Belum ada data untuk ditampilkan
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {dataView === 'soil' && (
+                  <div className="bg-surface-card border border-border-default rounded-2xl p-4 sm:p-6">
+                    <h3 className="text-sm font-bold text-text-primary mb-4 flex items-center gap-2">
+                      📊 Statistik Kelembapan Tanah
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {(() => {
+                        const soilValues = sensorData.map(d => d.soil_raw).filter(v => v != null);
+                        const avg = soilValues.length ? (soilValues.reduce((a, b) => a + b, 0) / soilValues.length).toFixed(0) : '—';
+                        const min = soilValues.length ? Math.min(...soilValues) : '—';
+                        const max = soilValues.length ? Math.max(...soilValues) : '—';
+                        const latest_ = soilValues.length ? soilValues[0] : '—';
+                        return [
+                          { label: 'Terbaru', value: latest_, color: 'text-emerald-400' },
+                          { label: 'Rata-rata', value: avg, color: 'text-blue-400' },
+                          { label: 'Minimum', value: min, color: 'text-cyan-400' },
+                          { label: 'Maksimum', value: max, color: 'text-amber-400' },
+                        ].map(stat => (
+                          <div key={stat.label} className="bg-surface-elevated rounded-xl p-4 text-center">
+                            <div className="text-xs text-text-muted uppercase tracking-wider mb-1">{stat.label}</div>
+                            <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -498,8 +653,10 @@ export default function HomePage() {
               <div className="animate-slide-down">
                 <div className="bg-surface-card border border-border-default rounded-2xl overflow-hidden">
                   <div className="px-4 sm:px-6 py-4 border-b border-border-default flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-text-primary">📋 Data Telemetri</h3>
-                    <span className="text-xs text-text-muted">{meta.total} total records</span>
+                    <h3 className="text-sm font-bold text-text-primary">
+                      {dataView === 'soil' ? '🌱 Data Kelembapan Tanah' : '📋 Data Telemetri'}
+                    </h3>
+                    <span className="text-xs text-text-muted">{meta.total} total records{interval ? ` • ${currentIntervalLabel}` : ''}</span>
                   </div>
 
                   {/* Desktop Table */}
@@ -509,10 +666,19 @@ export default function HomePage() {
                         <tr>
                           <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Waktu</th>
                           <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Device</th>
-                          <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Jarak (cm)</th>
-                          <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Tinggi Air (cm)</th>
-                          <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Tanah</th>
+                          {dataView === 'soil' ? (
+                            <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Kelembapan Tanah (raw)</th>
+                          ) : (
+                            <>
+                              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Jarak (cm)</th>
+                              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Tinggi Air (cm)</th>
+                              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Tanah</th>
+                            </>
+                          )}
                           <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Status</th>
+                          {interval && (
+                            <th className="px-4 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-text-muted border-b border-border-default">Jumlah Data</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -525,15 +691,23 @@ export default function HomePage() {
                               <td className="px-4 py-3.5">
                                 <span className="text-sm font-medium text-text-primary">{item.device_id || '—'}</span>
                               </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm text-text-secondary">
-                                {item.distance_cm != null ? item.distance_cm.toFixed(1) : '—'}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-text-primary">
-                                {item.water_level != null ? item.water_level.toFixed(1) : '—'}
-                              </td>
-                              <td className="px-4 py-3.5 text-right font-mono text-sm text-text-secondary">
-                                {item.soil_raw != null ? item.soil_raw : '—'}
-                              </td>
+                              {dataView === 'soil' ? (
+                                <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-emerald-400">
+                                  {item.soil_raw != null ? item.soil_raw : '—'}
+                                </td>
+                              ) : (
+                                <>
+                                  <td className="px-4 py-3.5 text-right font-mono text-sm text-text-secondary">
+                                    {item.distance_cm != null ? (typeof item.distance_cm === 'number' ? item.distance_cm.toFixed(1) : item.distance_cm) : '—'}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-right font-mono text-sm font-semibold text-text-primary">
+                                    {item.water_level != null ? (typeof item.water_level === 'number' ? item.water_level.toFixed(1) : item.water_level) : '—'}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-right font-mono text-sm text-text-secondary">
+                                    {item.soil_raw != null ? item.soil_raw : '—'}
+                                  </td>
+                                </>
+                              )}
                               <td className="px-4 py-3.5 text-center">
                                 <span
                                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border"
@@ -542,6 +716,11 @@ export default function HomePage() {
                                   {stCfg.icon} {stCfg.label}
                                 </span>
                               </td>
+                              {interval && (
+                                <td className="px-4 py-3.5 text-center text-xs text-text-muted">
+                                  {item.count || 1}
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -565,26 +744,38 @@ export default function HomePage() {
                               {stCfg.icon} {stCfg.label}
                             </span>
                           </div>
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div>
-                              <div className="text-[0.65rem] text-text-muted uppercase">TMA</div>
-                              <div className="text-sm font-bold text-text-primary">
-                                {item.water_level != null ? `${item.water_level.toFixed(1)}cm` : '—'}
+                          {dataView === 'soil' ? (
+                            <div className="text-center">
+                              <div className="text-[0.65rem] text-text-muted uppercase">Kelembapan Tanah</div>
+                              <div className="text-lg font-bold text-emerald-400">
+                                {item.soil_raw != null ? item.soil_raw : '—'} <span className="text-xs text-text-muted">raw</span>
                               </div>
                             </div>
-                            <div>
-                              <div className="text-[0.65rem] text-text-muted uppercase">Jarak</div>
-                              <div className="text-sm font-bold text-text-secondary">
-                                {item.distance_cm != null ? `${item.distance_cm.toFixed(1)}cm` : '—'}
+                          ) : (
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                              <div>
+                                <div className="text-[0.65rem] text-text-muted uppercase">TMA</div>
+                                <div className="text-sm font-bold text-text-primary">
+                                  {item.water_level != null ? `${typeof item.water_level === 'number' ? item.water_level.toFixed(1) : item.water_level}cm` : '—'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[0.65rem] text-text-muted uppercase">Jarak</div>
+                                <div className="text-sm font-bold text-text-secondary">
+                                  {item.distance_cm != null ? `${typeof item.distance_cm === 'number' ? item.distance_cm.toFixed(1) : item.distance_cm}cm` : '—'}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-[0.65rem] text-text-muted uppercase">Tanah</div>
+                                <div className="text-sm font-bold text-text-secondary">
+                                  {item.soil_raw != null ? item.soil_raw : '—'}
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <div className="text-[0.65rem] text-text-muted uppercase">Tanah</div>
-                              <div className="text-sm font-bold text-text-secondary">
-                                {item.soil_raw != null ? item.soil_raw : '—'}
-                              </div>
-                            </div>
-                          </div>
+                          )}
+                          {interval && item.count && (
+                            <div className="text-xs text-text-dim mt-1 text-center">({item.count} data digabung)</div>
+                          )}
                         </div>
                       );
                     })}
@@ -635,9 +826,9 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border-default py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-text-dim">
-          <span>© {new Date().getFullYear()} Monitoring Banjir — Sistem Peringatan Dini</span>
+          <span>© {new Date().getFullYear()} Flooding System — Sistem Peringatan Dini Banjir</span>
           <span className="flex items-center gap-1.5">
-            Made with <span className="text-red-400">❤</span> by Biru Langit
+            Flooding System v1.0
           </span>
         </div>
       </footer>

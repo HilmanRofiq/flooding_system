@@ -5,6 +5,7 @@ const SensorData = require("../models/SensorData");
 
 const receiveSensorData = async (req, res) => {
   const { tinggi_air } = req.body;
+  console.log(`[${new Date().toISOString()}] POST /api/sensor — body:`, req.body);
 
   if (tinggi_air === undefined) {
     return res.status(400).json({ error: "tinggi_air wajib dikirim" });
@@ -38,10 +39,24 @@ Segera waspada!
   });
 };
 
-// GET /api/sensor-data?limit=50&device_id=ESP-01
+// Helper: get interval milliseconds from string
+function getIntervalMs(interval) {
+  switch (interval) {
+    case '5min':  return 5 * 60 * 1000;
+    case '15min': return 15 * 60 * 1000;
+    case '30min': return 30 * 60 * 1000;
+    case '1hour': return 60 * 60 * 1000;
+    case '1day':  return 24 * 60 * 60 * 1000;
+    default:      return null;
+  }
+}
+
+// GET /api/sensor-data?limit=50&device_id=ESP-01&interval=5min
 const getSensorData = async (req, res) => {
   try {
-    const { limit = 50, device_id } = req.query;
+    const { limit = 50, device_id, interval } = req.query;
+    console.log(`[${new Date().toISOString()}] GET /api/sensor-data — query:`, req.query);
+
     const filter = {};
     
     // Prevent NoSQL injection by ensuring device_id is a string
@@ -54,13 +69,82 @@ const getSensorData = async (req, res) => {
     if (isNaN(queryLimit) || queryLimit <= 0) queryLimit = 50;
     if (queryLimit > 500) queryLimit = 500;
 
+    const intervalMs = getIntervalMs(interval);
+
+    // If an interval is specified, use MongoDB aggregation to group data
+    // limit now represents time units: limit=50 + interval=1hour = last 50 hours
+    if (intervalMs) {
+      const pipeline = [];
+
+      // Calculate time window: limit * interval = total time range
+      const fromDate = new Date(Date.now() - (queryLimit * intervalMs));
+      const timeFilter = { ...filter, waktu: { $gte: fromDate } };
+
+      // Match by time window + any device filter
+      pipeline.push({ $match: timeFilter });
+
+      // Sort descending first
+      pipeline.push({ $sort: { waktu: -1 } });
+
+      // Group by time bucket
+      pipeline.push({
+        $group: {
+          _id: {
+            $toDate: {
+              $subtract: [
+                { $toLong: "$waktu" },
+                { $mod: [{ $toLong: "$waktu" }, intervalMs] }
+              ]
+            }
+          },
+          device_id: { $first: "$device_id" },
+          water_level: { $avg: "$water_level" },
+          distance_cm: { $avg: "$distance_cm" },
+          soil_raw: { $avg: "$soil_raw" },
+          status: { $first: "$status" },
+          waktu: { $first: "$_id" },
+          count: { $sum: 1 }
+        }
+      });
+
+      // Sort grouped results descending
+      pipeline.push({ $sort: { _id: -1 } });
+
+      // Limit final output
+      pipeline.push({ $limit: queryLimit });
+
+      // Project to match normal schema
+      pipeline.push({
+        $project: {
+          _id: "$waktu",
+          device_id: 1,
+          water_level: { $round: ["$water_level", 1] },
+          distance_cm: { $round: ["$distance_cm", 1] },
+          soil_raw: { $round: ["$soil_raw", 0] },
+          status: 1,
+          waktu: "$_id",
+          count: 1
+        }
+      });
+
+      const data = await SensorData.aggregate(pipeline);
+      const total = await SensorData.countDocuments(filter);
+
+      return res.json({
+        success: true,
+        data,
+        meta: { total, showing: data.length, interval: interval || 'raw', fromDate: fromDate.toISOString() }
+      });
+    }
+
+    // Default: raw data without aggregation
     const data = await SensorData.find(filter)
       .sort({ waktu: -1 })
       .limit(queryLimit);
 
     const total = await SensorData.countDocuments(filter);
 
-    res.json({ success: true, data, meta: { total, showing: data.length } });
+    res.json({ success: true, data, meta: { total, showing: data.length, interval: 'raw' } });
   } catch (err) {
     console.error("getSensorData error:", err.message);
     res.status(500).json({ error: "Server error" });
@@ -71,6 +155,7 @@ const getSensorData = async (req, res) => {
 const getLatestSensorData = async (req, res) => {
   try {
     const { device_id } = req.query;
+    console.log(`[${new Date().toISOString()}] GET /api/sensor-data/latest — query:`, req.query);
     const filter = {};
     
     // Prevent NoSQL injection by ensuring device_id is a string
@@ -92,3 +177,4 @@ const getLatestSensorData = async (req, res) => {
 };
 
 module.exports = { receiveSensorData, getSensorData, getLatestSensorData };
+

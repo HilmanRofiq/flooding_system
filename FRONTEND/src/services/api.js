@@ -13,11 +13,12 @@ const handleResponse = async (response) => {
 // ==========================================
 
 export const sensorDataApi = {
-  // GET /api/sensor-data?limit=50&device_id=xxx
+  // GET /api/sensor-data?limit=50&device_id=xxx&interval=5min
   getAll: async (params = {}) => {
     const query = new URLSearchParams();
     if (params.limit) query.set('limit', params.limit);
     if (params.device_id) query.set('device_id', params.device_id);
+    if (params.interval) query.set('interval', params.interval);
 
     const res = await fetch(`${API_BASE}/sensor-data?${query.toString()}`);
     return handleResponse(res);
