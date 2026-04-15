@@ -11,9 +11,9 @@ const connectDB = async () => {
       socketTimeoutMS: 45000,
       family: 4, // Force IPv4
     });
-    console.log("MongoDB terkoneksi ✅");
+    console.log("MongoDB terkoneksi ");
   } catch (error) {
-    console.error("MongoDB gagal ❌", error.message);
+    console.error("MongoDB gagal ", error.message);
     process.exit(1);
   }
 };
