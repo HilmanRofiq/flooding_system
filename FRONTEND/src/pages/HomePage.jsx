@@ -801,7 +801,7 @@ export default function HomePage() {
                     {[
                       { label: 'Tipe Pos', value: 'Pos Tinggi Muka Air (TMA)' },
                       { label: 'Device ID', value: latest?.device_id || '—' },
-                      { label: 'Tinggi Sensor', value: '200 cm (dari dasar sungai)' },
+                      { label: 'Tinggi Sensor', value: '350 cm (dari dasar sungai)' },
                       { label: 'Offset Kalibrasi', value: '2 cm' },
                       { label: 'Batas AMAN', value: `≤ ${AMAN_MAX} cm` },
                       { label: 'Batas WASPADA', value: `${AMAN_MAX + 1} — ${WASPADA_MAX} cm` },
