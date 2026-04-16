@@ -4,7 +4,7 @@ const { shouldSendAlert } = require("../utils/alertGuard");
 
 // ===== PARAMETER KALIBRASI (BISA DIUBAH TANPA SENTUH ESP) =====
 const SENSOR_HEIGHT = 350;   // tinggi sensor dari dasar sungai (cm)
-const OFFSET_CM = 0;         // koreksi pemasangan fisik
+const OFFSET_CM = 2;         // koreksi pemasangan fisik
 
 const AMAN_MAX = 80;
 const WASPADA_MAX = 120;
