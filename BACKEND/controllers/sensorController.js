@@ -1,7 +1,17 @@
-const { getFloodStatus } = require("../utils/floodStatus");
-const { isStatusChanged } = require("../utils/statusCache");
+const { getCachedSettings } = require("../controllers/settingsController");
 const { sendWhatsApp } = require("../services/whatsappService");
+const { shouldSendAlert } = require("../utils/alertGuard");
 const SensorData = require("../models/SensorData");
+
+// Dynamic status from cached settings
+async function getFloodStatusDynamic(tinggi_air) {
+  const settings = await getCachedSettings();
+  const t = settings.thresholds;
+  if (tinggi_air <= t.aman_max) return "AMAN";
+  if (tinggi_air <= t.waspada_max) return "WASPADA";
+  if (tinggi_air <= t.siaga_max) return "SIAGA";
+  return "BAHAYA";
+}
 
 const receiveSensorData = async (req, res) => {
   const { tinggi_air } = req.body;
@@ -11,14 +21,13 @@ const receiveSensorData = async (req, res) => {
     return res.status(400).json({ error: "tinggi_air wajib dikirim" });
   }
 
-  const status = getFloodStatus(tinggi_air);
+  const status = await getFloodStatusDynamic(tinggi_air);
 
   // simpan ke DB
   await SensorData.create({ tinggi_air, status });
 
   // kirim WA kalau status berubah & level penting
- if (status === "SIAGA" || status === "BAHAYA") {
-  console.log(" MASUK BLOK KIRIM WHATSAPP");
+  if (shouldSendAlert(status)) {
     const message = `
 ⚠️ PERINGATAN BANJIR ⚠️
 
@@ -58,7 +67,7 @@ const getSensorData = async (req, res) => {
     console.log(`[${new Date().toISOString()}] GET /api/sensor-data — query:`, req.query);
 
     const filter = {};
-    
+
     // Prevent NoSQL injection by ensuring device_id is a string
     if (device_id && typeof device_id === 'string') {
       filter.device_id = device_id;
@@ -156,8 +165,9 @@ const getLatestSensorData = async (req, res) => {
   try {
     const { device_id } = req.query;
     console.log(`[${new Date().toISOString()}] GET /api/sensor-data/latest — query:`, req.query);
+
     const filter = {};
-    
+
     // Prevent NoSQL injection by ensuring device_id is a string
     if (device_id && typeof device_id === 'string') {
       filter.device_id = device_id;
@@ -177,4 +187,3 @@ const getLatestSensorData = async (req, res) => {
 };
 
 module.exports = { receiveSensorData, getSensorData, getLatestSensorData };
-

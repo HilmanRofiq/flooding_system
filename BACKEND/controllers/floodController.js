@@ -1,20 +1,13 @@
 const SensorData = require("../models/SensorData");
 const { sendWhatsApp } = require("../services/whatsappService");
 const { shouldSendAlert } = require("../utils/alertGuard");
+const { getCachedSettings } = require("./settingsController");
 
-// ===== PARAMETER KALIBRASI (BISA DIUBAH TANPA SENTUH ESP) =====
-const SENSOR_HEIGHT = 350;   // tinggi sensor dari dasar sungai (cm)
-const OFFSET_CM = 0;         // koreksi pemasangan fisik
-
-const AMAN_MAX = 80;
-const WASPADA_MAX = 120;
-const SIAGA_MAX = 140;
-
-// ================= STATUS =================
-function getStatus(level) {
-  if (level <= AMAN_MAX) return "AMAN";
-  if (level <= WASPADA_MAX) return "WASPADA";
-  if (level <= SIAGA_MAX) return "SIAGA";
+// ================= STATUS (dynamic from DB) =================
+function getStatus(level, thresholds) {
+  if (level <= thresholds.aman_max) return "AMAN";
+  if (level <= thresholds.waspada_max) return "WASPADA";
+  if (level <= thresholds.siaga_max) return "SIAGA";
   return "BAHAYA";
 }
 
@@ -30,10 +23,16 @@ const receiveFloodData = async (req, res) => {
       return res.status(400).json({ error: "Invalid payload" });
     }
 
+    // Get calibration settings from DB (cached 60s)
+    const settings = await getCachedSettings();
+    const SENSOR_HEIGHT = settings.sensorHeight;
+    const OFFSET_CM = settings.offsetCm;
+    const thresholds = settings.thresholds;
+
     // ===== KONVERSI JARAK → TINGGI AIR =====
     const water_level = SENSOR_HEIGHT - distance_cm + OFFSET_CM;
 
-    const status = getStatus(water_level);
+    const status = getStatus(water_level, thresholds);
 
     console.log(`Device ${device_id}`);
     console.log(`Distance : ${distance_cm} cm`);

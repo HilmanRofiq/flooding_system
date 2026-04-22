@@ -21,9 +21,8 @@ export default function AdminLoginPage() {
     try {
       const result = await authApi.login(email, password);
 
-      // Check if user is admin
       if (!result.data.user.isAdmin) {
-        setError('Access denied. Only administrators can login here.');
+        setError('Akses ditolak. Hanya administrator yang dapat login.');
         setLoading(false);
         return;
       }
@@ -31,7 +30,7 @@ export default function AdminLoginPage() {
       login(result.data.user, result.data.token);
       navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || 'Login gagal. Periksa email dan password Anda.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +48,7 @@ export default function AdminLoginPage() {
         <div className="absolute w-[400px] h-[400px] rounded-full blur-[120px] opacity-15 bg-blue-700 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-float-delayed-2" />
       </div>
 
-      {/* Theme toggle - floating */}
+      {/* Theme toggle */}
       <button
         onClick={toggleTheme}
         id="theme-toggle-login"
@@ -60,8 +59,8 @@ export default function AdminLoginPage() {
       </button>
 
       {/* Auth Card */}
-      <div className="relative z-10 w-full max-w-[440px] bg-surface-card backdrop-blur-3xl border border-border-default rounded-2xl p-6 sm:p-10 shadow-2xl">
-        {/* Back to Home link */}
+      <div className="relative z-10 w-full max-w-[440px] bg-surface-card backdrop-blur-3xl border border-border-default rounded-2xl p-6 sm:p-10 shadow-2xl animate-page-enter">
+        {/* Back to Home */}
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-blue-500 transition-colors mb-6"
@@ -73,7 +72,7 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-6 sm:mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center text-2xl">
-            🛡
+            🛡️
           </div>
           <span className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
             Admin Panel
@@ -85,7 +84,7 @@ export default function AdminLoginPage() {
           Admin Login
         </h2>
         <p className="text-center text-text-muted text-sm mb-6 sm:mb-8">
-          Sign in to manage devices and export sensor data
+          Masuk untuk mengelola sistem monitoring banjir
         </p>
 
         {/* Error Alert */}
@@ -105,7 +104,7 @@ export default function AdminLoginPage() {
               id="login-email"
               type="email"
               className={inputClass}
-              placeholder="Enter admin email"
+              placeholder="Masukkan email admin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -120,7 +119,7 @@ export default function AdminLoginPage() {
               id="login-password"
               type="password"
               className={inputClass}
-              placeholder="Enter your password"
+              placeholder="Masukkan password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -129,7 +128,7 @@ export default function AdminLoginPage() {
           </div>
           <button
             type="submit"
-            className="w-full inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 hover:shadow-[0_0_20px_rgba(51,120,255,0.3)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 hover:shadow-[0_0_20px_rgba(51,120,255,0.3)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             disabled={loading}
             id="login-submit"
           >
@@ -139,14 +138,14 @@ export default function AdminLoginPage() {
                 Signing in...
               </>
             ) : (
-              '🔐 Sign In as Admin'
+              '🔐 Masuk sebagai Admin'
             )}
           </button>
         </form>
 
         {/* Footer */}
         <div className="text-center mt-6 text-sm text-text-dim">
-          Only administrators can access this area.
+          Hanya administrator yang dapat mengakses area ini.
         </div>
       </div>
     </div>
