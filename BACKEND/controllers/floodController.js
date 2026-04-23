@@ -1,10 +1,11 @@
 const SensorData = require("../models/SensorData");
 const { sendWhatsApp } = require("../services/whatsappService");
 const { shouldSendAlert } = require("../utils/alertGuard");
+const { getFloodStatus } = require("../utils/floodStatus");
 
 // ===== PARAMETER KALIBRASI (BISA DIUBAH TANPA SENTUH ESP) =====
 const SENSOR_HEIGHT = 350;   // tinggi sensor dari dasar sungai (cm)
-const OFFSET_CM = 0;         // koreksi pemasangan fisik
+const OFFSET_CM = 2;         // koreksi pemasangan fisik
 
 const AMAN_MAX = 80;
 const WASPADA_MAX = 120;
@@ -30,7 +31,7 @@ const receiveFloodData = async (req, res) => {
     // ===== KONVERSI JARAK → TINGGI AIR =====
     const water_level = SENSOR_HEIGHT - distance_cm + OFFSET_CM;
 
-    const status = getStatus(water_level);
+    const status = getFloodStatus(distance_cm);
 
     console.log(`Device ${device_id}`);
     console.log(`Distance : ${distance_cm} cm`);
