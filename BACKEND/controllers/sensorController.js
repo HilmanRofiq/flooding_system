@@ -16,19 +16,19 @@ const receiveSensorData = async (req, res) => {
   // simpan ke DB
   await SensorData.create({ tinggi_air, status });
 
-  // kirim WA kalau status berubah & level penting
- if (status === "SIAGA" || status === "BAHAYA") {
-  console.log(" MASUK BLOK KIRIM WHATSAPP");
-    const message = `
-⚠️ PERINGATAN BANJIR ⚠️
+//   // kirim WA kalau status berubah & level penting
+//  if (status === "SIAGA" || status === "BAHAYA") {
+//   console.log(" MASUK BLOK KIRIM WHATSAPP");
+//     const message = `
+// ⚠️ PERINGATAN BANJIR ⚠️
 
-Tinggi air: ${tinggi_air} cm
-Status: ${status}
+// Tinggi air: ${tinggi_air} cm
+// Status: ${status}
 
-Segera waspada!
-    `;
-    await sendWhatsApp(message);
-  }
+// Segera waspada!
+//     `;
+//     await sendWhatsApp(message);
+//   }
 
   console.log(`Tinggi air: ${tinggi_air} cm | Status: ${status}`);
 
