@@ -11,12 +11,9 @@ const WASPADA_MAX = 120;
 const SIAGA_MAX = 140;
 
 // ================= STATUS =================
-function getStatus(level) {
-  if (level <= AMAN_MAX) return "AMAN";
-  if (level <= WASPADA_MAX) return "WASPADA";
-  if (level <= SIAGA_MAX) return "SIAGA";
-  return "BAHAYA";
-}
+const { getFloodStatus } = require("../utils/floodStatus");
+
+const status = getFloodStatus(water_level);
 
 // ================= CONTROLLER =================
 const receiveFloodData = async (req, res) => {
