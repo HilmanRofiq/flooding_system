@@ -20,16 +20,12 @@ const exportCSV = async (req, res) => {
     if (startDate || endDate) {
       filter.waktu = {};
       if (startDate) {
-        const start = new Date(startDate);
+        const start = new Date(`${startDate.split('T')[0]}T00:00:00+07:00`);
         if (!isNaN(start.getTime())) filter.waktu.$gte = start;
       }
       if (endDate) {
-        const end = new Date(endDate);
-        if (!isNaN(end.getTime())) {
-          // Set end date to end of day
-          end.setHours(23, 59, 59, 999);
-          filter.waktu.$lte = end;
-        }
+        const end = new Date(`${endDate.split('T')[0]}T23:59:59.999+07:00`);
+        if (!isNaN(end.getTime())) filter.waktu.$lte = end;
       }
       // Remove empty waktu filter
       if (Object.keys(filter.waktu).length === 0) delete filter.waktu;
@@ -131,15 +127,12 @@ const getSensorDataAdmin = async (req, res) => {
     if (startDate || endDate) {
       filter.waktu = {};
       if (startDate) {
-        const start = new Date(startDate);
+        const start = new Date(`${startDate.split('T')[0]}T00:00:00+07:00`);
         if (!isNaN(start.getTime())) filter.waktu.$gte = start;
       }
       if (endDate) {
-        const end = new Date(endDate);
-        if (!isNaN(end.getTime())) {
-          end.setHours(23, 59, 59, 999);
-          filter.waktu.$lte = end;
-        }
+        const end = new Date(`${endDate.split('T')[0]}T23:59:59.999+07:00`);
+        if (!isNaN(end.getTime())) filter.waktu.$lte = end;
       }
       if (Object.keys(filter.waktu).length === 0) delete filter.waktu;
     }

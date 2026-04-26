@@ -25,6 +25,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Middleware logger untuk melihat semua request yang masuk (sangat berguna untuk debug ESP32)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get("/", (req, res) => {
   res.send("Server monitoring banjir aktif");
 });
@@ -50,6 +56,12 @@ app.use("/api", sensorRoutes);
 // Flood data route (ESP sensor POST)
 const floodRoutes = require("./routes/floodRoutes");
 app.use("/", floodRoutes);
+
+// Fallback route 404 (jika ESP salah kirim ke alamat yang tidak ada)
+app.use((req, res) => {
+  console.warn(`⚠️ Peringatan: Ada request ke rute yang tidak dikenal: ${req.method} ${req.originalUrl}`);
+  res.status(404).send("Route not found");
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

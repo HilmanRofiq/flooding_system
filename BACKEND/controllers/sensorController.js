@@ -13,40 +13,7 @@ async function getFloodStatusDynamic(tinggi_air) {
   return "BAHAYA";
 }
 
-const receiveSensorData = async (req, res) => {
-  const { tinggi_air } = req.body;
-  console.log(`[${new Date().toISOString()}] POST /api/sensor — body:`, req.body);
 
-  if (tinggi_air === undefined) {
-    return res.status(400).json({ error: "tinggi_air wajib dikirim" });
-  }
-
-  const status = await getFloodStatusDynamic(tinggi_air);
-
-  // simpan ke DB
-  await SensorData.create({ tinggi_air, status });
-
-  // kirim WA kalau status berubah & level penting
-  if (shouldSendAlert(status)) {
-    const message = `
-⚠️ PERINGATAN BANJIR ⚠️
-
-Tinggi air: ${tinggi_air} cm
-Status: ${status}
-
-Segera waspada!
-    `;
-    await sendWhatsApp(message);
-  }
-
-  console.log(`Tinggi air: ${tinggi_air} cm | Status: ${status}`);
-
-  res.json({
-    status: "OK",
-    tinggi_air,
-    kondisi: status,
-  });
-};
 
 // Helper: get interval milliseconds from string
 function getIntervalMs(interval) {
@@ -182,4 +149,4 @@ const getLatestSensorData = async (req, res) => {
   }
 };
 
-module.exports = { receiveSensorData, getSensorData, getLatestSensorData };
+module.exports = { getSensorData, getLatestSensorData };

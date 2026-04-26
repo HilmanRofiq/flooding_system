@@ -43,6 +43,7 @@ export default function HomePage() {
   const [interval, setInterval_] = useState('');
   const [meta, setMeta] = useState({ total: 0, showing: 0 });
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isBackgroundRefetch, setIsBackgroundRefetch] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [activeTab, setActiveTab] = useState('grafik');
   const [dataView, setDataView] = useState('water');
@@ -69,8 +70,9 @@ export default function HomePage() {
   }
 
   // Fetch latest + historical data
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    else setIsBackgroundRefetch(true);
     setError('');
     try {
       const params = { limit };
@@ -88,6 +90,7 @@ export default function HomePage() {
       setError(err.message || 'Gagal memuat data sensor');
     } finally {
       setLoading(false);
+      setIsBackgroundRefetch(false);
     }
   }, [limit, interval]);
 
@@ -96,7 +99,7 @@ export default function HomePage() {
   // Auto-refresh every 10 seconds
   useEffect(() => {
     if (!autoRefresh) return;
-    const timer = window.setInterval(fetchData, 10000);
+    const timer = window.setInterval(() => fetchData(true), 10000);
     return () => window.clearInterval(timer);
   }, [autoRefresh, fetchData]);
 
@@ -372,7 +375,7 @@ export default function HomePage() {
         </div>
 
         {/* TAB CONTENT */}
-        {loading && sensorData.length > 0 && (
+        {loading && !isBackgroundRefetch && sensorData.length > 0 && (
           <div className="flex items-center gap-2 mb-4 text-text-muted text-sm">
             <div className="w-4 h-4 border-2 border-border-default border-t-blue-500 rounded-full animate-spin" />
             <span>Memuat ulang data...</span>
