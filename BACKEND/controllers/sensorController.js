@@ -81,16 +81,14 @@ const getSensorData = async (req, res) => {
     const intervalMs = getIntervalMs(interval);
 
     // If an interval is specified, use MongoDB aggregation to group data
-    // limit now represents time units: limit=50 + interval=1hour = last 50 hours
+    // limit = how many time buckets to return (most recent N buckets)
     if (intervalMs) {
       const pipeline = [];
 
-      // Calculate time window: limit * interval = total time range
-      const fromDate = new Date(Date.now() - (queryLimit * intervalMs));
-      const timeFilter = { ...filter, waktu: { $gte: fromDate } };
-
-      // Match by time window + any device filter
-      pipeline.push({ $match: timeFilter });
+      // Match by device filter only (no time window) — take data from all time
+      if (Object.keys(filter).length > 0) {
+        pipeline.push({ $match: filter });
+      }
 
       // Sort descending first
       pipeline.push({ $sort: { waktu: -1 } });
@@ -111,7 +109,6 @@ const getSensorData = async (req, res) => {
           distance_cm: { $avg: "$distance_cm" },
           soil_raw: { $avg: "$soil_raw" },
           status: { $first: "$status" },
-          waktu: { $first: "$_id" },
           count: { $sum: 1 }
         }
       });
@@ -122,10 +119,9 @@ const getSensorData = async (req, res) => {
       // Limit final output
       pipeline.push({ $limit: queryLimit });
 
-      // Project to match normal schema
       pipeline.push({
         $project: {
-          _id: "$waktu",
+          _id: 0,
           device_id: 1,
           water_level: { $round: ["$water_level", 1] },
           distance_cm: { $round: ["$distance_cm", 1] },
@@ -142,7 +138,7 @@ const getSensorData = async (req, res) => {
       return res.json({
         success: true,
         data,
-        meta: { total, showing: data.length, interval: interval || 'raw', fromDate: fromDate.toISOString() }
+        meta: { total, showing: data.length, interval: interval || 'raw' }
       });
     }
 

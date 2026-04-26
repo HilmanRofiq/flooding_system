@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import HomePageSkeleton from '../components/HomePageSkeleton';
 import { useTheme } from '../context/ThemeContext';
 import { sensorDataApi, settingsApi } from '../services/api';
 import {
@@ -233,7 +234,11 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
-        {/* Station Header */}
+        {loading && !sensorData.length ? (
+          <HomePageSkeleton />
+        ) : (
+          <>
+            {/* Station Header */}
         <header className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -367,13 +372,14 @@ export default function HomePage() {
         </div>
 
         {/* TAB CONTENT */}
-        {loading && !sensorData.length ? (
-          <div className="flex items-center justify-center py-16 text-text-muted text-sm gap-3">
-            <div className="w-5 h-5 border-2 border-border-default border-t-blue-500 rounded-full animate-spin" /> Memuat data sensor...
+        {loading && sensorData.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 text-text-muted text-sm">
+            <div className="w-4 h-4 border-2 border-border-default border-t-blue-500 rounded-full animate-spin" />
+            <span>Memuat ulang data...</span>
           </div>
-        ) : (
-          <>
-            {/* GRAFIK TAB */}
+        )}
+
+        {/* GRAFIK TAB */}
             {activeTab === 'grafik' && (
               <div className="animate-slide-down">
                 <div className="bg-surface-card border border-border-default rounded-2xl p-4 sm:p-6 mb-6">

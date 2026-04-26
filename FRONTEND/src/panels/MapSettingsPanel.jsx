@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { adminApi } from '../services/api';
+import PanelSkeleton from '../components/PanelSkeleton';
 
 const FIXED_ZOOM = 13;
 
@@ -55,11 +56,7 @@ export default function MapSettingsPanel() {
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.02},${lat - 0.015},${lng + 0.02},${lat + 0.015}&layer=mapnik&marker=${lat},${lng}`;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-text-muted text-sm gap-3">
-        <div className="w-5 h-5 border-2 border-border-default border-t-blue-500 rounded-full animate-spin" /> Memuat data...
-      </div>
-    );
+    return <PanelSkeleton />;
   }
 
   return (
