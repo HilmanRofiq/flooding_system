@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sensorDataApi } from '../services/api';
+import PanelSkeleton from '../components/PanelSkeleton';
 
 export default function SensorDataPanel() {
   const [devices, setDevices] = useState([]);
@@ -70,8 +71,11 @@ export default function SensorDataPanel() {
     return JSON.stringify(payload);
   };
 
-  const selectClass =
     'px-4 py-2.5 bg-surface-input border border-border-default rounded-lg text-slate-100 text-sm outline-none transition-all duration-150 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15 appearance-none bg-[url("data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20width=%2712%27%20height=%2712%27%20viewBox=%270%200%2012%2012%27%3E%3Cpath%20fill=%27%2394a3b8%27%20d=%27M6%208L1%203h10z%27/%3E%3C/svg%3E")] bg-no-repeat bg-[right_1rem_center] pr-10 cursor-pointer';
+
+  if (loading && sensorData.length === 0) {
+    return <PanelSkeleton />;
+  }
 
   return (
     <div className="animate-page-enter">
@@ -172,12 +176,7 @@ export default function SensorDataPanel() {
       </div>
 
       {/* Data Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-slate-500 text-sm gap-3">
-          <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          Loading sensor data...
-        </div>
-      ) : sensorData.length === 0 ? (
+      {sensorData.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="text-5xl mb-4 opacity-30">📭</div>
           <div className="text-lg font-semibold text-slate-400 mb-2">No Data Found</div>

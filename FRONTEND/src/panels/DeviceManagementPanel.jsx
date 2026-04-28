@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { devicesApi } from '../services/api';
 import Modal from '../components/Modal';
+import PanelSkeleton from '../components/PanelSkeleton';
 
 export default function DeviceManagementPanel() {
   const { token } = useAuth();
@@ -123,6 +124,10 @@ export default function DeviceManagementPanel() {
     </form>
   );
 
+  if (loading) {
+    return <PanelSkeleton />;
+  }
+
   return (
     <div className="animate-page-enter">
       {/* Header */}
@@ -143,11 +148,7 @@ export default function DeviceManagementPanel() {
       {error && <div className="px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2.5 mb-4 animate-slide-down bg-badge-red-bg text-badge-red-text border border-badge-red-border">⚠️ {error}</div>}
 
       {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-text-muted text-sm gap-3">
-          <div className="w-5 h-5 border-2 border-border-default border-t-blue-500 rounded-full animate-spin" /> Loading devices...
-        </div>
-      ) : devices.length === 0 ? (
+      {devices.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="text-5xl mb-4 opacity-30">📡</div>
           <div className="text-lg font-semibold text-text-secondary mb-2">No Devices Found</div>

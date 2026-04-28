@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigate, Link } from 'react-router-dom';
-import DeviceManagementPanel from '../panels/DeviceManagementPanel';
+import ThresholdCalibrationPanel from '../panels/ThresholdCalibrationPanel';
+import StationInfoPanel from '../panels/StationInfoPanel';
+import MapSettingsPanel from '../panels/MapSettingsPanel';
 import ExportCSVPanel from '../panels/ExportCSVPanel';
 
 export default function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('devices');
+  const [activeTab, setActiveTab] = useState('thresholds');
 
   const handleLogout = () => {
     logout();
@@ -23,12 +25,16 @@ export default function AdminDashboardPage() {
 
   const renderPanel = () => {
     switch (activeTab) {
-      case 'devices':
-        return <DeviceManagementPanel />;
+      case 'thresholds':
+        return <ThresholdCalibrationPanel />;
+      case 'station':
+        return <StationInfoPanel />;
+      case 'map':
+        return <MapSettingsPanel />;
       case 'export':
         return <ExportCSVPanel />;
       default:
-        return <DeviceManagementPanel />;
+        return <ThresholdCalibrationPanel />;
     }
   };
 
@@ -50,15 +56,15 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-2.5 text-lg font-extrabold text-text-primary hover:opacity-80 transition-opacity"
           >
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-base">
-              📡
+              🌊
             </div>
-            <span className="hidden sm:inline bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">Kalibrasi</span>
+            <span className="hidden sm:inline bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">Flooding System</span>
           </Link>
 
           {/* Admin badge + User Info */}
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-badge-amber-bg text-badge-amber-text border border-badge-amber-border">
-              🛡 Admin Panel
+              🛡️ Admin Panel
             </span>
 
             {/* Theme Toggle */}
@@ -81,7 +87,7 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleLogout}
               id="logout-btn"
-              className="px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-all duration-200"
+              className="px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-all duration-200 cursor-pointer"
             >
               Logout
             </button>
@@ -93,21 +99,45 @@ export default function AdminDashboardPage() {
       <div className="flex flex-1 max-md:flex-col">
         {/* Sidebar */}
         <aside className="w-[260px] bg-surface-card border-r border-border-default p-4 flex-shrink-0 max-md:w-full max-md:border-r-0 max-md:border-b max-md:p-3" id="admin-sidebar">
-          {/* Navigation */}
+          {/* Calibration */}
           <div className="mb-6">
             <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-text-muted px-3 mb-2">
-              Management
+              Kalibrasi
             </div>
             <button
-              className={linkClass('devices')}
-              onClick={() => setActiveTab('devices')}
-              id="nav-devices"
+              className={linkClass('thresholds')}
+              onClick={() => setActiveTab('thresholds')}
+              id="nav-thresholds"
             >
-              <span className="text-lg w-5 text-center">📱</span>
-              Device Management
+              <span className="text-lg w-5 text-center">📊</span>
+              Kalibrasi Ketinggian
             </button>
           </div>
 
+          {/* Management */}
+          <div className="mb-6">
+            <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-text-muted px-3 mb-2">
+              Pengaturan
+            </div>
+            <button
+              className={linkClass('station')}
+              onClick={() => setActiveTab('station')}
+              id="nav-station"
+            >
+              <span className="text-lg w-5 text-center">ℹ️</span>
+              Informasi Pos
+            </button>
+            <button
+              className={linkClass('map')}
+              onClick={() => setActiveTab('map')}
+              id="nav-map"
+            >
+              <span className="text-lg w-5 text-center">🗺️</span>
+              Pengaturan Peta
+            </button>
+          </div>
+
+          {/* Tools */}
           <div className="mb-6">
             <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-text-muted px-3 mb-2">
               Tools
@@ -122,7 +152,7 @@ export default function AdminDashboardPage() {
             </button>
           </div>
 
-          {/* Quick link to homepage */}
+          {/* Quick link */}
           <div className="mt-auto pt-4 border-t border-border-default">
             <Link
               to="/"
@@ -130,7 +160,7 @@ export default function AdminDashboardPage() {
               id="nav-homepage"
             >
               <span className="text-lg w-5 text-center">🏠</span>
-              View Homepage
+              Lihat Homepage
             </Link>
           </div>
         </aside>

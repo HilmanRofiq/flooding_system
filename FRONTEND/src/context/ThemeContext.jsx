@@ -34,7 +34,20 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const toggleTheme = useCallback(() => {
+    const root = document.documentElement;
+
+    // Add transition class to coordinate all elements simultaneously
+    root.classList.add('theme-transition');
+
+    // Toggle the theme
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
+    // Remove transition class after animation completes (slightly longer than CSS 250ms)
+    const timer = setTimeout(() => {
+      root.classList.remove('theme-transition');
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const isDark = theme === 'dark';

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AuthContext = createContext(null);
 
-const SESSION_KEY = 'kalibrasi_session';
+const SESSION_KEY = 'flooding_session';
 const SESSION_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 export function AuthProvider({ children }) {
@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
           setUser(session.user);
           setToken(session.token);
 
-          // Set a timeout to auto-logout when 1 hour expires
+          // Auto-logout when session expires
           const remaining = SESSION_DURATION - elapsed;
           const timer = setTimeout(() => {
             logout();
