@@ -30,7 +30,7 @@ function getIntervalMs(interval) {
 // GET /api/sensor-data?limit=50&device_id=ESP-01&interval=5min
 const getSensorData = async (req, res) => {
   try {
-    const { limit = 50, device_id, interval } = req.query;
+    const { limit = 50, device_id, interval, start_date, end_date } = req.query;
     console.log(`[${new Date().toISOString()}] GET /api/sensor-data — query:`, req.query);
 
     const filter = {};
@@ -38,6 +38,17 @@ const getSensorData = async (req, res) => {
     // Prevent NoSQL injection by ensuring device_id is a string
     if (device_id && typeof device_id === 'string') {
       filter.device_id = device_id;
+    }
+
+    // Add date range filtering
+    if (start_date || end_date) {
+      filter.waktu = {};
+      if (start_date) {
+        filter.waktu.$gte = new Date(start_date);
+      }
+      if (end_date) {
+        filter.waktu.$lte = new Date(end_date);
+      }
     }
 
     // Parse and guard the limit to a maximum of 500

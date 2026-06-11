@@ -94,11 +94,11 @@ export default function ExportCSVPanel() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-text-secondary mb-2 uppercase tracking-wide" htmlFor="export-start">Tanggal Mulai</label>
-            <input id="export-start" type="date" className={inputClass} value={startDate} onChange={(e) => { setStartDate(e.target.value); setPreview(null); }} />
+            <input id="export-start" type="datetime-local" className={inputClass} value={startDate} onChange={(e) => { setStartDate(e.target.value); setPreview(null); }} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-text-secondary mb-2 uppercase tracking-wide" htmlFor="export-end">Tanggal Akhir</label>
-            <input id="export-end" type="date" className={inputClass} value={endDate} onChange={(e) => { setEndDate(e.target.value); setPreview(null); }} />
+            <input id="export-end" type="datetime-local" className={inputClass} value={endDate} onChange={(e) => { setEndDate(e.target.value); setPreview(null); }} />
           </div>
         </div>
 
