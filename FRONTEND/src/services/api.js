@@ -132,6 +132,8 @@ export const sensorDataApi = {
     if (params.limit) query.set('limit', params.limit);
     if (params.device_id) query.set('device_id', params.device_id);
     if (params.interval) query.set('interval', params.interval);
+    if (params.start_date) query.set('start_date', params.start_date);
+    if (params.end_date) query.set('end_date', params.end_date);
 
     const res = await fetch(`${API_BASE}/sensor-data?${query.toString()}`);
     return handleResponse(res);

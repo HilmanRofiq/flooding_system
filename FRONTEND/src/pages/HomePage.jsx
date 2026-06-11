@@ -41,6 +41,8 @@ export default function HomePage() {
   const [error, setError] = useState('');
   const [limit, setLimit] = useState(50);
   const [interval, setInterval_] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [meta, setMeta] = useState({ total: 0, showing: 0 });
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isBackgroundRefetch, setIsBackgroundRefetch] = useState(false);
@@ -77,6 +79,8 @@ export default function HomePage() {
     try {
       const params = { limit };
       if (interval) params.interval = interval;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
 
       const [latestRes, historyRes] = await Promise.all([
         sensorDataApi.getLatest(),
@@ -92,7 +96,7 @@ export default function HomePage() {
       setLoading(false);
       setIsBackgroundRefetch(false);
     }
-  }, [limit, interval]);
+  }, [limit, interval, startDate, endDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -334,7 +338,15 @@ export default function HomePage() {
         {/* Controls */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
           <div>
-            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Rentang Waktu</label>
+            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Tanggal Awal</label>
+            <input type="datetime-local" className="px-3 py-2 bg-surface-input border border-border-default rounded-lg text-text-primary text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Tanggal Akhir</label>
+            <input type="datetime-local" className="px-3 py-2 bg-surface-input border border-border-default rounded-lg text-text-primary text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-[0.65rem] font-semibold text-text-muted mb-1.5 uppercase tracking-wide">Satuan Agregasi (Opsional)</label>
             <select className="px-3 py-2 bg-surface-input border border-border-default rounded-lg text-text-primary text-sm outline-none transition-all duration-200 focus:border-blue-500 focus:ring-3 focus:ring-blue-500/15 appearance-none cursor-pointer pr-8" value={interval} onChange={(e) => setInterval_(e.target.value)} id="interval-select">
               {INTERVAL_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
@@ -345,6 +357,9 @@ export default function HomePage() {
               {[25, 50, 100, 200, 500].map(n => <option key={n} value={n}>{n} {currentIntervalUnit}</option>)}
             </select>
           </div>
+          {(startDate || endDate) && (
+            <button onClick={() => { setStartDate(''); setEndDate(''); }} className="px-4 py-2 bg-badge-red-bg border border-badge-red-border text-badge-red-text rounded-lg text-sm font-semibold hover:bg-red-500/20 transition-all duration-200 active:scale-95 mt-auto cursor-pointer">✕ Reset Waktu</button>
+          )}
           <button onClick={fetchData} id="refresh-btn" className="px-4 py-2 bg-surface-elevated border border-border-default rounded-lg text-text-primary text-sm font-semibold hover:bg-surface-card-hover hover:border-border-hover transition-all duration-200 active:scale-95 mt-auto cursor-pointer">🔄 Refresh</button>
           <button onClick={() => setAutoRefresh(!autoRefresh)} id="auto-refresh-btn" className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 active:scale-95 mt-auto cursor-pointer ${autoRefresh ? 'bg-badge-green-bg border border-badge-green-border text-badge-green-text' : 'bg-surface-elevated border border-border-default text-text-secondary hover:bg-surface-card-hover'}`}>
             {autoRefresh ? '⏸ Auto: ON (10s)' : '▶ Auto: OFF'}
