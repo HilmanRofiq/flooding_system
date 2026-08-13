@@ -24,7 +24,7 @@ Sistem ini menggunakan sensor ultrasonik untuk mengukur permukaan air, kemudian 
 ## Tech Stack
 
 - Backend: Node.js
-- Database: (sesuaikan, misalnya MongoDB)
+- Database: MongoDB
 - Frontend: Web-based dashboard
 - IoT Device: ESP8266 + Ultrasonic Sensor
 - Notification Service: WhatsApp API (Fonnte)
